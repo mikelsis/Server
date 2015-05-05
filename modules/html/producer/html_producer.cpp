@@ -457,9 +457,9 @@ namespace caspar {
 
 					CefWindowInfo window_info;
 
-					window_info.SetTransparentPainting(TRUE);
-					window_info.SetAsOffScreen(nullptr);
-					//window_info.SetAsWindowless(nullptr, true);
+					//window_info.SetTransparentPainting(TRUE);
+					//window_info.SetAsOffScreen(nullptr);
+					window_info.SetAsWindowless(nullptr, true);
 					
 					CefBrowserSettings browser_settings;
 					CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
