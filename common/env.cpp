@@ -73,7 +73,7 @@ void configure(const std::wstring& filename)
             asio::ip::tcp::endpoint endpoint(asio::ip::address::from_string(filename));
             sock.connect(endpoint);
             
-            std::string request("GET /casparConfig.xml HTTP/1.1\r\n\r\n");
+            std::string request("GET /casparConfig.json HTTP/1.1\r\n\r\n");
             sock.send(asio::buffer(request));
             
             std::string response;
@@ -86,12 +86,12 @@ void configure(const std::wstring& filename)
             socket.close();
             
             boost::iostreams::stream<boost::iostreams::array_source> stream(response.c_str(), response.size());
-            boost::property_tree::read_xml(stream, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
+            boost::property_tree::read_json(stream, pt);
         }
         else
         {
             std::wifstream file(initialPath + L"\\" + filename);
-            boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
+            boost::property_tree::read_json(file, pt);
         }
         
 		auto initialPath = fs::initial_path<fs::path>().wstring();
