@@ -33,14 +33,18 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/asio.hpp>
 
 #include <functional>
 #include <iostream>
+#include <regex>
 
 namespace caspar { namespace env {
 
 namespace fs = boost::filesystem;
-
+namespace asio = boost::asio;
+namespace regex = std::tr1::regex;
+    
 std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
@@ -58,11 +62,40 @@ void configure(const std::wstring& filename)
 {
 	try
 	{
+        regex rx("[(http(s)?):\/\/(www\.)?a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)");
+        bool isUrl = std::tr1::regex_match(filename.c_str(),rx);
+        
+        if (isUrl)
+        {
+            boost::system::error_code ec;
+            asio::io_service svc;
+            assio::ip::tcp::socket sock(svc);
+            asio::ip::tcp::endpoint endpoint(asio::ip::address::from_string(filename));
+            sock.connect(endpoint);
+            
+            std::string request("GET /casparConfig.xml HTTP/1.1\r\n\r\n");
+            sock.send(asio::buffer(request));
+            
+            std::string response;
+            do {
+                char buf[1024];
+                size_t bytes_transferred = sock.receive(asio::buffer(buf), {}, ec);
+                if (!ec) response.append(buf, buf + bytes_transferred);
+            } while (!ec);
+            
+            socket.close();
+            
+            boost::iostreams::stream<boost::iostreams::array_source> stream(response.c_str(), response.size());
+            boost::property_tree::read_xml(stream, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
+        }
+        else
+        {
+            std::wifstream file(initialPath + L"\\" + filename);
+            boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
+        }
+        
 		auto initialPath = fs::initial_path<fs::path>().wstring();
 	
-		std::wifstream file(initialPath + L"\\" + filename);
-		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
-
 		auto paths = pt.get_child(L"configuration.paths");
 		media = widen(paths.get(L"media-path", initialPath + L"\\media\\"));
 		log = widen(paths.get(L"log-path", initialPath + L"\\log\\"));
